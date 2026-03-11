@@ -1,5 +1,5 @@
 package org.example;
 
-public class TerminalBuffer {
+public final class TerminalBuffer {
 
 }
