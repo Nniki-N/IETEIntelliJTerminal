@@ -3,24 +3,56 @@ package org.example;
 import java.util.*;
 
 public final class TerminalBuffer {
+    private static final int DEFAULT_WIDTH = 80;
+    private static final int DEFAULT_HEIGHT = 24;
+    private static final int DEFAULT_MAX_SCROLLBACK = 1000;
+
     private final int width;
     private final int height;
     private final int maxScrollback;
 
+    /**
+     * Visible lines, always contains exactly {@code height} elements.
+     */
     private final List<TerminalLine> screen;
+
+    /**
+     * Scrollback history, oldest line first.
+     */
     private final List<TerminalLine> scrollback;
 
     private int cursorColumn;
     private int cursorRow;
 
+    /**
+     * Attributes applied to all subsequent write/insert/fill operations.
+     */
     private CellAttributes currentAttributes;
 
+    /**
+     * Creates a buffer with custom dimensions and scrollback limit.
+     *
+     * @param width         columns per line and must be positive
+     * @param height        number of visible rows and must be positive
+     * @param maxScrollback maximum lines kept in history. When set 0, disables scrollback
+     */
     public TerminalBuffer(int width, int height, int maxScrollback) {
+        if (width <= 0) {
+            throw new IllegalArgumentException("width must be positive");
+        }
+        if (height <= 0) {
+            throw new IllegalArgumentException("height must be positive");
+        }
+        if (maxScrollback < 0) {
+            throw new IllegalArgumentException("maxScrollback must be >= 0");
+        }
+
         this.width = width;
         this.height = height;
         this.maxScrollback = maxScrollback;
 
         this.screen = new ArrayList<>(height);
+
         for (int i = 0; i < height; i++) {
             screen.add(new TerminalLine(width));
         }
@@ -31,8 +63,11 @@ public final class TerminalBuffer {
         this.currentAttributes = CellAttributes.DEFAULT;
     }
 
+    /**
+     * Creates a buffer with default dimensions (80×24, 1000-line scrollback).
+     */
     public TerminalBuffer() {
-        this(80, 24, 1000);
+        this(DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_MAX_SCROLLBACK);
     }
 
     public int getWidth() {
@@ -67,66 +102,120 @@ public final class TerminalBuffer {
         return currentAttributes;
     }
 
-    public void setCursorColumn(int col) {
-        cursorColumn = col;
+    /**
+     * Returns the {@link CellAttributes} at ({@code column}, {@code row}).
+     *
+     * @param row screen row (&gt;= 0) or scrollback row (&lt; 0)
+     */
+    public CellAttributes getAttributesAt(int column, int row) {
+        return resolveCell(column, row).getAttributes();
     }
 
+    /**
+     * Returns the character at ({@code column}, {@code row}).
+     * Empty cells return {@code ' '}.
+     *
+     * @param row screen row (&gt;= 0) or scrollback row (&lt; 0; {@code -1} = most recent)
+     */
+    public char getCharacterAt(int column, int row) {
+        Cell cell = resolveCell(column, row);
+
+        return cell.isEmpty() ? ' ' : cell.getCharacter();
+    }
+
+    /**
+     * Sets the cursor column directly.
+     * Value is clamped to valid screen bounds.
+     */
+    public void setCursorColumn(int column) {
+        cursorColumn = clamp(column, 0, width - 1);
+    }
+
+    /**
+     * Sets the cursor row directly.
+     * Value is clamped to valid screen bounds.
+     */
     public void setCursorRow(int row) {
-        cursorRow = row;
+        cursorRow = clamp(row, 0, height - 1);
     }
 
-    public void setCursor(int col, int row) {
-        cursorColumn = Math.max(0, Math.min(width - 1, col));
-        cursorRow = Math.max(0, Math.min(height - 1, row));
+    /**
+     * Positions the cursor at ({@code column}, {@code row}).
+     * Values are clamped to valid screen bounds.
+     */
+    public void setCursor(int column, int row) {
+        cursorColumn = clamp(column, 0, width - 1);
+        cursorRow = clamp(row, 0, height - 1);
     }
 
+    /**
+     * Sets only the foreground color for subsequent writes.
+     */
     public void setForeground(TerminalColor foregroundColor) {
-        currentAttributes = new CellAttributes(
-                foregroundColor,
-                currentAttributes.getBackgroundColor(),
-                currentAttributes.getStyles()
+        currentAttributes = currentAttributes.withForeground(
+                Objects.requireNonNull(foregroundColor, "foregroundColor must be not null")
         );
     }
 
+    /**
+     * Sets only the background color for subsequent writes.
+     */
     public void setBackground(TerminalColor backgroundColor) {
-        currentAttributes = new CellAttributes(
-                currentAttributes.getForegroundColor(),
-                backgroundColor,
-                currentAttributes.getStyles()
+        currentAttributes = currentAttributes.withBackground(
+                Objects.requireNonNull(backgroundColor, "backgroundColor must be not null")
         );
     }
 
+    /**
+     * Replaces the active text style set; pass no arguments to clear all styles.
+     */
     public void setStyles(TextStyle... styles) {
-        currentAttributes = new CellAttributes(
-                currentAttributes.getForegroundColor(),
-                currentAttributes.getBackgroundColor(),
-                new HashSet<>(Arrays.asList(styles))
-        );
+        EnumSet<TextStyle> stylesSet = styles.length == 0
+                ? EnumSet.noneOf(TextStyle.class)
+                : EnumSet.copyOf(Arrays.asList(styles));
+
+        currentAttributes = currentAttributes.withStyles(stylesSet);
     }
 
+    /**
+     * Moves the cursor up by {@code n} rows; stops at row 0.
+     */
     public void moveCursorUp(int n) {
-        cursorRow = Math.max(0, cursorRow - n);
+        cursorRow = clamp(cursorRow - n, 0, height - 1);
     }
 
+    /**
+     * Moves the cursor down by {@code n} rows; stops at {@code height - 1}.
+     */
     public void moveCursorDown(int n) {
-        cursorRow = Math.min(height - 1, cursorRow + n);
+        cursorRow = clamp(cursorRow + n, 0, height - 1);
     }
 
+    /**
+     * Moves the cursor left by {@code n} columns; stops at column 0.
+     */
     public void moveCursorLeft(int n) {
-        cursorColumn = Math.max(0, cursorColumn - n);
+        cursorColumn = clamp(cursorColumn - n, 0, width - 1);
     }
 
+    /**
+     * Moves the cursor right by {@code n} columns; stops at {@code width - 1}.
+     */
     public void moveCursorRight(int n) {
-        cursorColumn = Math.min(width - 1, cursorColumn + n);
+        cursorColumn = clamp(cursorColumn + n, 0, width - 1);
     }
 
+    /**
+     * Writes {@code text} from the cursor position, overwriting existing content.
+     * Wraps to the next row at the right edge and scrolls if already on the last row.
+     */
     public void writeText(String text) {
         if (text == null || text.isEmpty()) {
             return;
         }
 
-        for (char ch : text.toCharArray()) {
-            screen.get(cursorRow).setCell(cursorColumn, ch, currentAttributes);
+        for (char character : text.toCharArray()) {
+            screen.get(cursorRow).setCell(cursorColumn, character, currentAttributes);
             cursorColumn++;
 
             if (cursorColumn >= width) {
@@ -144,12 +233,11 @@ public final class TerminalBuffer {
     public void insertText(String text) {
         if (text == null || text.isEmpty()) return;
 
-        for (char ch : text.toCharArray()) {
+        for (char character : text.toCharArray()) {
             int insertRow = cursorRow;
             TerminalLine line = screen.get(insertRow);
-            Cell displaced = line.getCell(width - 1).copy();
 
-            line.insertCellAt(cursorColumn, ch, currentAttributes);
+            Cell displaced = line.insertCellAt(cursorColumn, character, currentAttributes);
             cursorColumn++;
 
             boolean scrolledForDisplaced = false;
@@ -160,8 +248,7 @@ public final class TerminalBuffer {
                     scrolledForDisplaced = true;
                 }
                 int targetRow = scrolledForDisplaced ? height - 1 : insertRow + 1;
-                screen.get(targetRow).insertCellAt(
-                        0, displaced.getCharacter(), displaced.getAttributes());
+                screen.get(targetRow).insertCellAt(0, displaced.getCharacter(), displaced.getAttributes());
             }
 
             if (cursorColumn >= width) {
@@ -177,16 +264,30 @@ public final class TerminalBuffer {
         }
     }
 
-    public void fillLine(int row, char ch) {
+    /**
+     * Fills every cell on {@code row} with {@code character} using the current attributes.
+     * Does not move the cursor.
+     */
+    public void fillLine(int row, char character) {
         checkScreenRow(row);
-        screen.get(row).fill(ch, currentAttributes);
+        screen.get(row).fill(character, currentAttributes);
     }
 
+    /**
+     * Clears every cell on {@code row}.
+     * Does not move the cursor.
+     */
     public void clearLine(int row) {
         checkScreenRow(row);
         screen.get(row).clear();
     }
 
+    /**
+     * <p> Scrolls the screen up by one line. The top line moves to scrollback and new
+     * empty line is appended at the bottom. Does not move the cursor.
+     *
+     * <p> If scrollback is full the oldest line is discarded.
+     */
     public void insertEmptyLineAtBottom() {
         TerminalLine topLine = screen.removeFirst();
 
@@ -201,6 +302,9 @@ public final class TerminalBuffer {
         screen.add(new TerminalLine(width));
     }
 
+    /**
+     * Clears all screen cells and resets the cursor to (0, 0). Scrollback is not affected.
+     */
     public void clearScreen() {
         for (TerminalLine line : screen) {
             line.clear();
@@ -210,26 +314,81 @@ public final class TerminalBuffer {
         cursorRow = 0;
     }
 
+    /**
+     * Clears the screen (see {@link #clearScreen()}) and discards all scrollback lines.
+     */
     public void clearScreenAndScrollback() {
         clearScreen();
         scrollback.clear();
     }
 
-    public char getCharAt(int col, int row) {
-        Cell cell = resolveCell(col, row);
+    /**
+     * Resolves a (column, row) pair to the {@link Cell}. Validates column first.
+     */
+    private Cell resolveCell(int column, int row) {
+        checkRowCell(column);
 
-        return cell.isEmpty() ? ' ' : cell.getCharacter();
+        return resolveLine(row).getCell(column);
     }
 
-    public CellAttributes getAttributesAt(int col, int row) {
-        return resolveCell(col, row).getAttributes();
+    /**
+     * Resolves a row to the corresponding {@link TerminalLine}.
+     * Screen (row (&gt;= 0)); scrollback (row (&lt; 0)) where {@code -1} = most recent.
+     */
+    private TerminalLine resolveLine(int row) {
+        if (row >= 0) {
+            checkScreenRow(row);
+
+            return screen.get(row);
+        } else {
+            int scrollbackSize = scrollback.size();
+            int index = scrollbackSize + row;
+
+            if (index < 0) {
+                throw new IndexOutOfBoundsException("Scrollback row " + row + " out of bounds (scrollback size=" + scrollbackSize + ")");
+            }
+
+            return scrollback.get(index);
+        }
     }
 
+    /**
+     * Ensures that the given {@code column} is within the valid range.
+     */
+    private void checkRowCell(int column) {
+        if (column < 0 || column >= width) {
+            throw new IndexOutOfBoundsException("Screen column " + column + " out of bounds (width=" + width + ")");
+        }
+    }
 
+    /**
+     * Ensures that the given {@code row} is within the valid range.
+     */
+    private void checkScreenRow(int row) {
+        if (row < 0 || row >= height) {
+            throw new IndexOutOfBoundsException("Screen row " + row + " out of bounds (height=" + height + ")");
+        }
+    }
+
+    /**
+     * Clamps {@code value} to [{@code min}, {@code max}].
+     */
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    /**
+     * Returns the content of {@code row} as a string of exactly {@code width} characters.
+     *
+     * @param row screen row (&gt;= 0) or scrollback row (&lt; 0)
+     */
     public String getLineAsString(int row) {
         return resolveLine(row).toString();
     }
 
+    /**
+     * Returns the entire screen as a multi-line string, each row terminated by {@code '\n'}.
+     */
     public String getScreenAsString() {
         StringBuilder sb = new StringBuilder(height * (width + 1));
 
@@ -240,6 +399,10 @@ public final class TerminalBuffer {
         return sb.toString();
     }
 
+    /**
+     * Returns the full terminal history (at first scrollback, then screen) as a multi-line string,
+     * each row terminated by {@code '\n'}.
+     */
     public String getAllContentAsString() {
         StringBuilder sb = new StringBuilder();
 
@@ -252,40 +415,5 @@ public final class TerminalBuffer {
         }
 
         return sb.toString();
-    }
-
-    private Cell resolveCell(int col, int row) {
-        checkRowCell(col);
-
-        return resolveLine(row).getCell(col);
-    }
-
-    private TerminalLine resolveLine(int row) {
-        if (row >= 0) {
-            checkScreenRow(row);
-
-            return screen.get(row);
-        } else {
-            int scrollbackSize = scrollback.size();
-            int index = scrollbackSize + row;
-
-            if (index < 0 || index >= scrollbackSize) {
-                throw new IndexOutOfBoundsException("Scrollback row " + row + " out of bounds (scrollback size=" + scrollbackSize + ")");
-            }
-
-            return scrollback.get(index);
-        }
-    }
-
-    private void checkRowCell(int col) {
-        if (col < 0 || col >= width) {
-            throw new IndexOutOfBoundsException("Screen col " + col + " out of bounds (width=" + width + ")");
-        }
-    }
-
-    private void checkScreenRow(int row) {
-        if (row < 0 || row >= height) {
-            throw new IndexOutOfBoundsException("Screen row " + row + " out of bounds (height=" + height + ")");
-        }
     }
 }

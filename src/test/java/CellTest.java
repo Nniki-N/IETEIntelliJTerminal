@@ -6,8 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.EnumSet;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -31,7 +30,7 @@ class CellTest {
         @Test
         @DisplayName("char constructor creates a non-empty cell with given attributes")
         void testCharConstructor() {
-            Set<TextStyle> styles = Set.of(TextStyle.BOLD);
+            EnumSet<TextStyle> styles = EnumSet.of(TextStyle.BOLD);
             CellAttributes cellAttributes = new CellAttributes(TerminalColor.RED, TerminalColor.BLUE, styles);
             Cell cell = new Cell('A', cellAttributes);
 
@@ -58,15 +57,15 @@ class CellTest {
         @Test
         @DisplayName("set() stores the provided attributes")
         void testSetSavesAttributes() {
-            Set<TextStyle> styles = new HashSet<>();
+            EnumSet<TextStyle> styles = EnumSet.noneOf(TextStyle.class);
             CellAttributes cellAttributes = new CellAttributes(TerminalColor.GREEN, TerminalColor.DEFAULT, styles);
 
             Cell cell = new Cell();
             cell.set('Q', cellAttributes);
 
-            assertEquals(TerminalColor.GREEN, cell.getAttributes().getForegroundColor());
-            assertEquals(TerminalColor.DEFAULT, cell.getAttributes().getBackgroundColor());
-            assertTrue(cell.getAttributes().getStyles().isEmpty());
+            assertEquals(TerminalColor.GREEN, cell.getAttributes().foregroundColor());
+            assertEquals(TerminalColor.DEFAULT, cell.getAttributes().backgroundColor());
+            assertTrue(cell.getAttributes().styles().isEmpty());
         }
     }
 
@@ -87,7 +86,7 @@ class CellTest {
         @Test
         @DisplayName("setEmpty() resets attributes to DEFAULT")
         void testSetEmptyResetsAttributes() {
-            Set<TextStyle> styles = Set.of(TextStyle.BOLD);
+            EnumSet<TextStyle> styles = EnumSet.of(TextStyle.BOLD);
             CellAttributes cellAttributes = new CellAttributes(TerminalColor.RED, TerminalColor.BLUE, styles);
             Cell cell = new Cell('X', cellAttributes);
             cell.setEmpty();
@@ -103,16 +102,16 @@ class CellTest {
         @Test
         @DisplayName("copy has same attributes")
         void testCopyHasSameAttributes() {
-            Set<TextStyle> styles = Set.of(TextStyle.BOLD);
+            EnumSet<TextStyle> styles = EnumSet.of(TextStyle.BOLD);
             CellAttributes cellAttributes = new CellAttributes(TerminalColor.CYAN, TerminalColor.DEFAULT, styles);
             Cell original = new Cell('M', cellAttributes);
             Cell copy = original.copy();
 
             assertEquals('M', copy.getCharacter());
             assertFalse(copy.isEmpty());
-            assertEquals(TerminalColor.CYAN, copy.getAttributes().getForegroundColor());
-            assertEquals(TerminalColor.DEFAULT, copy.getAttributes().getBackgroundColor());
-            assertTrue(copy.getAttributes().getStyles().contains(TextStyle.BOLD));
+            assertEquals(TerminalColor.CYAN, copy.getAttributes().foregroundColor());
+            assertEquals(TerminalColor.DEFAULT, copy.getAttributes().backgroundColor());
+            assertTrue(copy.getAttributes().styles().contains(TextStyle.BOLD));
         }
 
         @Test

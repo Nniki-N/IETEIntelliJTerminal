@@ -5,7 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.util.Set;
+import java.util.EnumSet;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,13 +19,13 @@ class CellAttributesTest {
         @Test
         @DisplayName("stores given foreground, background and styles")
         void testConstructor() {
-            Set<TextStyle> styles = Set.of(TextStyle.BOLD, TextStyle.UNDERLINE);
+            EnumSet<TextStyle> styles = EnumSet.of(TextStyle.BOLD, TextStyle.UNDERLINE);
             CellAttributes cellAttributes = new CellAttributes(TerminalColor.RED, TerminalColor.BLUE, styles);
 
-            assertEquals(TerminalColor.RED, cellAttributes.getForegroundColor());
-            assertEquals(TerminalColor.BLUE, cellAttributes.getBackgroundColor());
-            assertTrue(cellAttributes.getStyles().contains(TextStyle.BOLD));
-            assertTrue(cellAttributes.getStyles().contains(TextStyle.UNDERLINE));
+            assertEquals(TerminalColor.RED, cellAttributes.foregroundColor());
+            assertEquals(TerminalColor.BLUE, cellAttributes.backgroundColor());
+            assertTrue(cellAttributes.styles().contains(TextStyle.BOLD));
+            assertTrue(cellAttributes.styles().contains(TextStyle.UNDERLINE));
         }
     }
 
@@ -36,19 +36,19 @@ class CellAttributesTest {
         @Test
         @DisplayName("DEFAULT has DEFAULT foreground")
         void testDefaultForeground() {
-            assertEquals(TerminalColor.DEFAULT, CellAttributes.DEFAULT.getForegroundColor());
+            assertEquals(TerminalColor.DEFAULT, CellAttributes.DEFAULT.foregroundColor());
         }
 
         @Test
         @DisplayName("DEFAULT has DEFAULT background")
         void testDefaultBackground() {
-            assertEquals(TerminalColor.DEFAULT, CellAttributes.DEFAULT.getBackgroundColor());
+            assertEquals(TerminalColor.DEFAULT, CellAttributes.DEFAULT.backgroundColor());
         }
 
         @Test
         @DisplayName("DEFAULT has no styles")
         void testDefaultNoStyles() {
-            assertTrue(CellAttributes.DEFAULT.getStyles().isEmpty());
+            assertTrue(CellAttributes.DEFAULT.styles().isEmpty());
         }
     }
 }

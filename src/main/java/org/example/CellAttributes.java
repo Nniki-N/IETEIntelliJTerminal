@@ -1,34 +1,45 @@
 package org.example;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.EnumSet;
+import java.util.Objects;
 
-public final class CellAttributes {
-    private final TerminalColor foregroundColor;
-    private final TerminalColor backgroundColor;
-    private final Set<TextStyle> styles;
-
+/**
+ * <p> Attributes applied to a cell: foreground color, background color,
+ * and a set of default styles (bold, italic, underline).
+ *
+ * <p> Use the {@code with*()} builder methods to derive new instances.
+ */
+public record CellAttributes(TerminalColor foregroundColor, TerminalColor backgroundColor, EnumSet<TextStyle> styles) {
     public static final CellAttributes DEFAULT = new CellAttributes(
             TerminalColor.DEFAULT,
             TerminalColor.DEFAULT,
-            new HashSet<>()
+            EnumSet.noneOf(TextStyle.class)
     );
 
-    public CellAttributes(TerminalColor foregroundColor, TerminalColor backgroundColor, Set<TextStyle> styles) {
-        this.backgroundColor = backgroundColor;
-        this.foregroundColor = foregroundColor;
-        this.styles = styles;
+    public CellAttributes(TerminalColor foregroundColor, TerminalColor backgroundColor, EnumSet<TextStyle> styles) {
+        this.foregroundColor = Objects.requireNonNull(foregroundColor, "foregroundColor must be not null");
+        this.backgroundColor = Objects.requireNonNull(backgroundColor, "backgroundColor must be not null");
+        this.styles = EnumSet.copyOf(Objects.requireNonNull(styles, "styles must be not null"));
     }
 
-    public TerminalColor getForegroundColor() {
-        return foregroundColor;
+    /**
+     * Returns a new instance with the foreground color replaced.
+     */
+    public CellAttributes withForeground(TerminalColor color) {
+        return new CellAttributes(color, backgroundColor, styles);
     }
 
-    public TerminalColor getBackgroundColor() {
-        return backgroundColor;
+    /**
+     * Returns a new instance with the background color replaced.
+     */
+    public CellAttributes withBackground(TerminalColor color) {
+        return new CellAttributes(foregroundColor, color, styles);
     }
 
-    public Set<TextStyle> getStyles() {
-        return styles;
+    /**
+     * Returns a new instance with the style set replaced.
+     */
+    public CellAttributes withStyles(EnumSet<TextStyle> newStyles) {
+        return new CellAttributes(foregroundColor, backgroundColor, newStyles);
     }
 }

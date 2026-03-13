@@ -6,8 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.EnumSet;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -39,14 +38,14 @@ class TerminalLineTest {
         @DisplayName("setCell() sets passed character and attributes at the column")
         void testSetCellSavesCharacterCorrectly() {
             TerminalLine line = new TerminalLine(5);
-            Set<TextStyle> styles = new HashSet<>();
+            EnumSet<TextStyle> styles = EnumSet.noneOf(TextStyle.class);
             CellAttributes cellAttributes = new CellAttributes(TerminalColor.RED, TerminalColor.DEFAULT, styles);
 
             line.setCell(2, 'X', cellAttributes);
 
             assertEquals('X', line.getCell(2).getCharacter());
             assertFalse(line.getCell(2).isEmpty());
-            assertEquals(TerminalColor.RED, line.getCell(2).getAttributes().getForegroundColor());
+            assertEquals(TerminalColor.RED, line.getCell(2).getAttributes().foregroundColor());
         }
 
         @Test
@@ -133,7 +132,7 @@ class TerminalLineTest {
         @DisplayName("fill() sets to every cell")
         void testFillAllWithCharacterChangesEveryCell() {
             TerminalLine line = new TerminalLine(4);
-            Set<TextStyle> styles = new HashSet<>();
+            EnumSet<TextStyle> styles = EnumSet.noneOf(TextStyle.class);
             CellAttributes cellAttributes = new CellAttributes(TerminalColor.YELLOW, TerminalColor.DEFAULT, styles);
 
             line.fill('-', cellAttributes);
@@ -141,7 +140,7 @@ class TerminalLineTest {
             for (int i = 0; i < 4; i++) {
                 assertEquals('-', line.getCell(i).getCharacter());
                 assertFalse(line.getCell(i).isEmpty());
-                assertEquals(TerminalColor.YELLOW, line.getCell(i).getAttributes().getForegroundColor());
+                assertEquals(TerminalColor.YELLOW, line.getCell(i).getAttributes().foregroundColor());
             }
         }
 

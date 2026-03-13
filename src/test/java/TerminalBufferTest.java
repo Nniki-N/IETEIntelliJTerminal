@@ -55,7 +55,7 @@ class TerminalBufferTest {
 
             for (int row = 0; row < height; row++) {
                 for (int col = 0; col < width; col++) {
-                    assertEquals(' ', buf.getCharAt(col, row));
+                    assertEquals(' ', buf.getCharacterAt(col, row));
                     assertEquals(CellAttributes.DEFAULT, buf.getAttributesAt(col, row));
                 }
             }
@@ -102,8 +102,8 @@ class TerminalBufferTest {
         void testSetForeground() {
             buf.setForeground(TerminalColor.RED);
 
-            assertEquals(TerminalColor.RED, buf.getCurrentAttributes().getForegroundColor());
-            assertEquals(TerminalColor.DEFAULT, buf.getCurrentAttributes().getBackgroundColor());
+            assertEquals(TerminalColor.RED, buf.getCurrentAttributes().foregroundColor());
+            assertEquals(TerminalColor.DEFAULT, buf.getCurrentAttributes().backgroundColor());
         }
 
         @Test
@@ -111,8 +111,8 @@ class TerminalBufferTest {
         void testSetBackground() {
             buf.setBackground(TerminalColor.BLUE);
 
-            assertEquals(TerminalColor.BLUE, buf.getCurrentAttributes().getBackgroundColor());
-            assertEquals(TerminalColor.DEFAULT, buf.getCurrentAttributes().getForegroundColor());
+            assertEquals(TerminalColor.BLUE, buf.getCurrentAttributes().backgroundColor());
+            assertEquals(TerminalColor.DEFAULT, buf.getCurrentAttributes().foregroundColor());
         }
 
         @Test
@@ -120,9 +120,9 @@ class TerminalBufferTest {
         void testSetStylesReplacesAll() {
             buf.setStyles(TextStyle.BOLD, TextStyle.UNDERLINE);
 
-            assertTrue(buf.getCurrentAttributes().getStyles().contains(TextStyle.BOLD));
-            assertTrue(buf.getCurrentAttributes().getStyles().contains(TextStyle.UNDERLINE));
-            assertFalse(buf.getCurrentAttributes().getStyles().contains(TextStyle.ITALIC));
+            assertTrue(buf.getCurrentAttributes().styles().contains(TextStyle.BOLD));
+            assertTrue(buf.getCurrentAttributes().styles().contains(TextStyle.UNDERLINE));
+            assertFalse(buf.getCurrentAttributes().styles().contains(TextStyle.ITALIC));
         }
 
         @Test
@@ -131,7 +131,7 @@ class TerminalBufferTest {
             buf.setStyles(TextStyle.BOLD);
             buf.setStyles();
 
-            assertTrue(buf.getCurrentAttributes().getStyles().isEmpty());
+            assertTrue(buf.getCurrentAttributes().styles().isEmpty());
         }
 
         @Test
@@ -143,8 +143,8 @@ class TerminalBufferTest {
 
             CellAttributes cellAttributes = buf.getAttributesAt(0, 0);
 
-            assertEquals(TerminalColor.MAGENTA, cellAttributes.getForegroundColor());
-            assertTrue(cellAttributes.getStyles().contains(TextStyle.BOLD));
+            assertEquals(TerminalColor.MAGENTA, cellAttributes.foregroundColor());
+            assertTrue(cellAttributes.styles().contains(TextStyle.BOLD));
         }
 
         @Test
@@ -154,7 +154,7 @@ class TerminalBufferTest {
             buf.writeText("X");
             buf.setForeground(TerminalColor.BLUE);
 
-            assertEquals(TerminalColor.RED, buf.getAttributesAt(0, 0).getForegroundColor());
+            assertEquals(TerminalColor.RED, buf.getAttributesAt(0, 0).foregroundColor());
         }
     }
 
@@ -310,11 +310,11 @@ class TerminalBufferTest {
             buf.setCursor(2, 1);
             buf.writeText("Hello");
 
-            assertEquals('H', buf.getCharAt(2, 1));
-            assertEquals('e', buf.getCharAt(3, 1));
-            assertEquals('l', buf.getCharAt(4, 1));
-            assertEquals('l', buf.getCharAt(5, 1));
-            assertEquals('o', buf.getCharAt(6, 1));
+            assertEquals('H', buf.getCharacterAt(2, 1));
+            assertEquals('e', buf.getCharacterAt(3, 1));
+            assertEquals('l', buf.getCharacterAt(4, 1));
+            assertEquals('l', buf.getCharacterAt(5, 1));
+            assertEquals('o', buf.getCharacterAt(6, 1));
         }
 
         @Test
@@ -334,11 +334,11 @@ class TerminalBufferTest {
             buf.setCursor(3, 0);
             buf.writeText("BCD");
 
-            assertEquals('A', buf.getCharAt(2, 0));
-            assertEquals('B', buf.getCharAt(3, 0));
-            assertEquals('C', buf.getCharAt(4, 0));
-            assertEquals('D', buf.getCharAt(5, 0));
-            assertEquals('A', buf.getCharAt(6, 0));
+            assertEquals('A', buf.getCharacterAt(2, 0));
+            assertEquals('B', buf.getCharacterAt(3, 0));
+            assertEquals('C', buf.getCharacterAt(4, 0));
+            assertEquals('D', buf.getCharacterAt(5, 0));
+            assertEquals('A', buf.getCharacterAt(6, 0));
         }
 
         @Test
@@ -347,10 +347,10 @@ class TerminalBufferTest {
             buf.setCursor(8, 0);
             buf.writeText("ABCD");
 
-            assertEquals('A', buf.getCharAt(8, 0));
-            assertEquals('B', buf.getCharAt(9, 0));
-            assertEquals('C', buf.getCharAt(0, 1));
-            assertEquals('D', buf.getCharAt(1, 1));
+            assertEquals('A', buf.getCharacterAt(8, 0));
+            assertEquals('B', buf.getCharacterAt(9, 0));
+            assertEquals('C', buf.getCharacterAt(0, 1));
+            assertEquals('D', buf.getCharacterAt(1, 1));
         }
 
         @Test
@@ -415,11 +415,11 @@ class TerminalBufferTest {
             buf.setCursor(1, 0);
             buf.insertText("BC");
 
-            assertEquals('A', buf.getCharAt(0, 0));
-            assertEquals('B', buf.getCharAt(1, 0));
-            assertEquals('C', buf.getCharAt(2, 0));
-            assertEquals('A', buf.getCharAt(3, 0));
-            assertEquals('A', buf.getCharAt(4, 0));
+            assertEquals('A', buf.getCharacterAt(0, 0));
+            assertEquals('B', buf.getCharacterAt(1, 0));
+            assertEquals('C', buf.getCharacterAt(2, 0));
+            assertEquals('A', buf.getCharacterAt(3, 0));
+            assertEquals('A', buf.getCharacterAt(4, 0));
         }
 
         @Test
@@ -439,8 +439,8 @@ class TerminalBufferTest {
             buf.setCursor(0, 0);
             buf.insertText("A");
 
-            assertEquals('A', buf.getCharAt(0, 0));
-            assertEquals('X', buf.getCharAt(0, 1));
+            assertEquals('A', buf.getCharacterAt(0, 0));
+            assertEquals('X', buf.getCharacterAt(0, 1));
         }
 
         @Test
@@ -491,7 +491,7 @@ class TerminalBufferTest {
             buf.fillLine(1, '*');
 
             for (int col = 0; col < width; col++) {
-                assertEquals('*', buf.getCharAt(col, 1));
+                assertEquals('*', buf.getCharacterAt(col, 1));
             }
         }
 
@@ -502,9 +502,9 @@ class TerminalBufferTest {
             buf.fillLine(0, '-');
 
             for (int col = 0; col < width; col++) {
-                assertEquals(TerminalColor.YELLOW, buf.getAttributesAt(col, 0).getForegroundColor());
-                assertEquals(TerminalColor.DEFAULT, buf.getAttributesAt(col, 0).getBackgroundColor());
-                assertTrue(buf.getAttributesAt(col, 0).getStyles().isEmpty());
+                assertEquals(TerminalColor.YELLOW, buf.getAttributesAt(col, 0).foregroundColor());
+                assertEquals(TerminalColor.DEFAULT, buf.getAttributesAt(col, 0).backgroundColor());
+                assertTrue(buf.getAttributesAt(col, 0).styles().isEmpty());
             }
         }
 
@@ -514,9 +514,9 @@ class TerminalBufferTest {
             buf.fillLine(1, 'X');
 
             for (int col = 0; col < width; col++) {
-                assertEquals(' ', buf.getCharAt(col, 0));
-                assertEquals('X', buf.getCharAt(col, 1));
-                assertEquals(' ', buf.getCharAt(col, 2));
+                assertEquals(' ', buf.getCharacterAt(col, 0));
+                assertEquals('X', buf.getCharacterAt(col, 1));
+                assertEquals(' ', buf.getCharacterAt(col, 2));
             }
         }
 
@@ -539,7 +539,7 @@ class TerminalBufferTest {
             buf.clearLine(2);
 
             for (int col = 0; col < width; col++) {
-                assertEquals(' ', buf.getCharAt(col, 2));
+                assertEquals(' ', buf.getCharacterAt(col, 2));
                 assertEquals(CellAttributes.DEFAULT, buf.getAttributesAt(col, 2));
             }
         }
@@ -551,7 +551,7 @@ class TerminalBufferTest {
             buf.fillLine(1, 'B');
             buf.clearLine(0);
 
-            assertEquals('B', buf.getCharAt(0, 1));
+            assertEquals('B', buf.getCharacterAt(0, 1));
         }
     }
 
@@ -584,8 +584,8 @@ class TerminalBufferTest {
             buf.fillLine(2, 'C');
             buf.insertEmptyLineAtBottom();
 
-            assertEquals('B', buf.getCharAt(0, 0));
-            assertEquals('C', buf.getCharAt(0, 1));
+            assertEquals('B', buf.getCharacterAt(0, 0));
+            assertEquals('C', buf.getCharacterAt(0, 1));
         }
 
         @Test
@@ -594,7 +594,7 @@ class TerminalBufferTest {
             buf.insertEmptyLineAtBottom();
 
             for (int col = 0; col < width; col++) {
-                assertEquals(' ', buf.getCharAt(col, 2));
+                assertEquals(' ', buf.getCharacterAt(col, 2));
             }
         }
 
@@ -669,7 +669,7 @@ class TerminalBufferTest {
 
             for (int row = 0; row < height; row++) {
                 for (int col = 0; col < width; col++) {
-                    assertEquals(' ', buf.getCharAt(col, row));
+                    assertEquals(' ', buf.getCharacterAt(col, row));
                     assertEquals(CellAttributes.DEFAULT, buf.getAttributesAt(col, row));
                 }
             }
@@ -713,7 +713,7 @@ class TerminalBufferTest {
 
             for (int row = 0; row < height; row++) {
                 for (int col = 0; col < width; col++) {
-                    assertEquals(' ', buf.getCharAt(col, row));
+                    assertEquals(' ', buf.getCharacterAt(col, row));
                     assertEquals(CellAttributes.DEFAULT, buf.getAttributesAt(col, row));
                 }
             }
@@ -733,62 +733,62 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("getCharAt returns space for an empty screen cell")
+        @DisplayName("getCharacterAt returns space for an empty screen cell")
         void testGetCharAtEmptyCell() {
-            assertEquals(' ', buf.getCharAt(0, 0));
+            assertEquals(' ', buf.getCharacterAt(0, 0));
         }
 
         @Test
-        @DisplayName("getCharAt returns the written character")
+        @DisplayName("getCharacterAt returns the written character")
         void testGetCharAtFilledCell() {
             buf.writeText("Z");
 
-            assertEquals('Z', buf.getCharAt(0, 0));
+            assertEquals('Z', buf.getCharacterAt(0, 0));
         }
 
         @Test
-        @DisplayName("getCharAt with negative column throws")
+        @DisplayName("getCharacterAt with negative column throws")
         void testGetCharAtNegativeColThrows() {
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.getCharAt(-1, 0));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.getCharacterAt(-1, 0));
         }
 
         @Test
-        @DisplayName("getCharAt with column >= width throws")
+        @DisplayName("getCharacterAt with column >= width throws")
         void testGetCharAtOverflowColumnThrows() {
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.getCharAt(width, 0));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.getCharacterAt(width, 0));
         }
 
         @Test
-        @DisplayName("getCharAt with row >= height throws")
+        @DisplayName("getCharacterAt with row >= height throws")
         void testGetCharAtOverflowRowThrows() {
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.getCharAt(0, height));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.getCharacterAt(0, height));
         }
 
         @Test
-        @DisplayName("getCharAt with row=-1 returns the most recent scrollback line")
+        @DisplayName("getCharacterAt with row=-1 returns the most recent scrollback line")
         void testGetCharAtScrollbackMostRecent() {
             buf.fillLine(0, 'S');
             buf.insertEmptyLineAtBottom();
 
-            assertEquals('S', buf.getCharAt(0, -1));
+            assertEquals('S', buf.getCharacterAt(0, -1));
         }
 
         @Test
-        @DisplayName("getCharAt with row=-2 accesses the second most recent scrollback line")
+        @DisplayName("getCharacterAt with row=-2 accesses the second most recent scrollback line")
         void testGetCharAtScrollbackOlderLine() {
             buf.fillLine(0, 'A');
             buf.insertEmptyLineAtBottom();
             buf.fillLine(0, 'B');
             buf.insertEmptyLineAtBottom();
 
-            assertEquals('A', buf.getCharAt(0, -2));
-            assertEquals('B', buf.getCharAt(0, -1));
+            assertEquals('A', buf.getCharacterAt(0, -2));
+            assertEquals('B', buf.getCharacterAt(0, -1));
         }
 
         @Test
-        @DisplayName("getCharAt with out-of-bounds scrollback row throws")
+        @DisplayName("getCharacterAt with out-of-bounds scrollback row throws")
         void testGetCharAtScrollbackOutOfBoundsThrows() {
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.getCharAt(0, -1));
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.getCharacterAt(0, -1));
         }
 
         @Test
@@ -797,7 +797,7 @@ class TerminalBufferTest {
             buf.setForeground(TerminalColor.GREEN);
             buf.writeText("G");
 
-            assertEquals(TerminalColor.GREEN, buf.getAttributesAt(0, 0).getForegroundColor());
+            assertEquals(TerminalColor.GREEN, buf.getAttributesAt(0, 0).foregroundColor());
         }
 
         @Test
@@ -807,7 +807,7 @@ class TerminalBufferTest {
             buf.fillLine(0, 'M');
             buf.insertEmptyLineAtBottom();
 
-            assertEquals(TerminalColor.MAGENTA, buf.getAttributesAt(0, -1).getForegroundColor());
+            assertEquals(TerminalColor.MAGENTA, buf.getAttributesAt(0, -1).foregroundColor());
         }
 
         @Test

@@ -1,5 +1,6 @@
 package org.example;
 
+/** The 16 standard terminal colors plus DEFAULT.*/
 public enum TerminalColor {
     DEFAULT,
     BLACK,
