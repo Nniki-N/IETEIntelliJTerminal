@@ -177,8 +177,6 @@ public final class TerminalBuffer {
         }
     }
 
-
-
     public void fillLine(int row, char ch) {
         checkScreenRow(row);
         screen.get(row).fill(ch, currentAttributes);
