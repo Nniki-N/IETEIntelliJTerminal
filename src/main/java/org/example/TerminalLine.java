@@ -49,6 +49,42 @@ public final class TerminalLine {
         }
     }
 
+    public void insertCellAt(int col, char ch, CellAttributes attributes) {
+        checkCol(col);
+
+        for (int i = width - 1; i > col; i--) {
+            Cell src = cells[i - 1];
+
+            if (src.isEmpty()) {
+                cells[i].setEmpty();
+            } else {
+                cells[i].set(src.getCharacter(), src.getAttributes());
+            }
+        }
+
+        cells[col].set(ch, attributes);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder(width);
+
+        for (Cell cell : cells) {
+            sb.append(cell.isEmpty() ? ' ' : cell.getCharacter());
+        }
+
+        return sb.toString();
+    }
+
+    public TerminalLine copy() {
+        Cell[] copiedCells = new Cell[width];
+
+        for (int i = 0; i < width; i++) {
+            copiedCells[i] = cells[i].copy();
+        }
+
+        return new TerminalLine(copiedCells, width);
+    }
     private void checkCol(int col) {
         if (col < 0 || col >= width) {
             throw new IndexOutOfBoundsException("Column " + col + " out of bounds for width " + width);

@@ -40,4 +40,11 @@ public final class Cell {
         this.attributes = CellAttributes.DEFAULT;
         this.empty = true;
     }
+
+    public Cell copy() {
+        Cell copy = new Cell(this.character, this.attributes);
+        copy.empty = this.empty;
+
+        return copy;
+    }
 }
