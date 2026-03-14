@@ -4,7 +4,7 @@ import java.util.EnumSet;
 import java.util.Objects;
 
 /**
- * <p> Attributes applied to a cell: foreground color, background color,
+ * Attributes applied to a cell: foreground color, background color,
  * and a set of default styles (bold, italic, underline).
  *
  * <p> Use the {@code with*()} builder methods to derive new instances.

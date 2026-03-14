@@ -3,13 +3,22 @@ package org.example;
 import java.util.Objects;
 
 /**
- * <p> A fixed-width row in the terminal grid (an array of {@link Cell}).
+ * A fixed-width row in the terminal grid (an array of {@link Cell}).
  *
  * <p> Width is set at construction time and never changes. All column indices must be in {@code [0, width)}.
+ *
+ * <p> A line knows whether it ended because content automatically wrapped ({@link #isSoftWrapped()} {@code == true})
+ * or because the terminal explicitly moved to the next line ({@code false}).
+ * This flag is used by resize to group physical lines into logical lines.
  */
 public final class TerminalLine {
     private final Cell[] cells;
     private final int width;
+
+    /**
+     * True when this line ended because content reached the right edge and wrapped automatically.
+     */
+    private boolean softWrapped;
 
     /**
      * Creates a blank line of the given width with all cells empty.
@@ -25,14 +34,29 @@ public final class TerminalLine {
         for (int i = 0; i < width; i++) {
             cells[i] = new Cell();
         }
+
+        this.softWrapped = false;
     }
 
     /**
      * Private constructor used by {@link #copy}.
      */
-    private TerminalLine(Cell[] cells, int width) {
+    private TerminalLine(Cell[] cells, int width, boolean softWrapped) {
         this.cells = cells;
         this.width = width;
+        this.softWrapped = softWrapped;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public boolean isSoftWrapped() {
+        return softWrapped;
+    }
+
+    public void setSoftWrapped(boolean softWrapped) {
+        this.softWrapped = softWrapped;
     }
 
     /**
@@ -46,21 +70,49 @@ public final class TerminalLine {
 
     /**
      * Overwrites the cell at {@code column} with the given character and attributes.
+     *
+     * <p> If the column is part of a wide character pair, the pair is cleared first so no
+     * orphaned wide or continuation cell is left behind.
      */
     public void setCell(int column, char character, CellAttributes attributes) {
         Objects.requireNonNull(attributes, "attributes must ne not null");
         checkColumn(column);
 
+        clearWidePairAt(column);
         cells[column].set(character, attributes);
     }
 
     /**
      * Resets the cell at {@code column} to empty.
+     *
+     * <p> If the column is part of a wide character pair, clears any pair it belongs to.
      */
     public void clearCell(int column) {
         checkColumn(column);
 
+        clearWidePairAt(column);
         cells[column].setEmpty();
+    }
+
+    /**
+     * Writes a wide character at {@code column}, taking two cells.
+     * The left cell holds the character, while the right cell becomes a continuation placeholder.
+     *
+     * @throws IllegalArgumentException if {@code column + 1 >= width}. The caller must ensure
+     *                                  that 2 columns are available before calling this.
+     */
+    public void setWideCell(int column, char character, CellAttributes attributes) {
+        Objects.requireNonNull(attributes, "attributes must be not null");
+        checkColumn(column);
+
+        if (column + 1 >= width) {
+            throw new IllegalArgumentException("Wide character at column " + column + " does not fit in width " + width);
+        }
+
+        clearWidePairAt(column);
+        cells[column].set(character, attributes);
+        clearWidePairAt(column + 1);
+        cells[column + 1].setWideContinuation();
     }
 
     /**
@@ -84,31 +136,109 @@ public final class TerminalLine {
     }
 
     /**
-     * Inserts {@code character} at {@code column}, shifting all cells from {@code column}
-     * rightward by one.
+     * Inserts as many cells from {@code toInsert} as fit at {@code column} and
+     * returns a single array of everything that did not make it onto this line:
+     * {@code [overflow | displaced]}, where:
+     * <ul>
+     *   <li>overflow is the tail of {@code toInsert} that exceeded the line.</li>
+     *   <li>displaced is cells that were pushed off the right edge by the shift.</li>
+     * </ul>
      *
-     * @return a copy of the rightmost cell that was pushed off the line,
+     * <p> Wide pair integrity: if the shift moves a wide char to {@code width - 1} while
+     * its continuation is displaced as the first displaced cell, the orphaned wide char
+     * is moved to the front of the returned array, and the cell at {@code width - 1} is
+     * cleared.
+     *
+     * @param toInsert cells to insert starting at {@code column}. may be longer than
+     *                 the space available, everything that excess becomes overflow
+     * @return overflow + displaced, in this order.
      */
-    // todo: think also about inserting many cells at once
-    public Cell insertCellAt(int column, char character, CellAttributes attributes) {
-        Objects.requireNonNull(attributes, "attributes must ne not null");
+    public Cell[] insertCellsAt(int column, Cell[] toInsert) {
+        Objects.requireNonNull(toInsert, "toInsert must not be null");
         checkColumn(column);
 
-        Cell displaced = cells[width - 1].copy();
+        if (toInsert.length == 0) {
+            return new Cell[0];
+        }
 
-        for (int i = width - 1; i > column; i--) {
-            Cell src = cells[i - 1];
+        int available = width - column;
+        int fit = Math.min(toInsert.length, available);
+
+        if (fit < toInsert.length && toInsert[fit].isWideContinuation()) {
+            fit--;
+        }
+
+        int overflow = toInsert.length - fit;
+        int displacedCount = Math.min(fit, available);
+
+        Cell[] displacedCopies = new Cell[displacedCount];
+
+        for (int i = 0; i < displacedCount; i++) {
+            displacedCopies[i] = cells[width - displacedCount + i].copy();
+        }
+
+        // Shift cells[column ... width - fit - 1] rightward by fit positions
+        for (int i = width - 1; i >= column + fit; i--) {
+            Cell src = cells[i - fit];
 
             if (src.isEmpty()) {
                 cells[i].setEmpty();
+            } else if (src.isWideContinuation()) {
+                cells[i].setWideContinuation();
             } else {
                 cells[i].set(src.getCharacter(), src.getAttributes());
             }
         }
 
-        cells[column].set(character, attributes);
+        // Write the fitting cells at [column ... column + fit - 1]
+        for (int i = 0; i < fit; i++) {
+            Cell src = toInsert[i];
 
-        return displaced;
+            if (src.isEmpty()) {
+                cells[column + i].setEmpty();
+            } else if (src.isWideContinuation()) {
+                cells[column + i].setWideContinuation();
+            } else {
+                cells[column + i].set(src.getCharacter(), src.getAttributes());
+            }
+        }
+
+        boolean splitWide = displacedCount > 0
+                && displacedCopies[0].isWideContinuation()
+                && !cells[width - 1].isEmpty()
+                && !cells[width - 1].isWideContinuation();
+
+        // Wide character was split case: set the last character to empty
+        if (splitWide) {
+            Cell orphan = cells[width - 1].copy();
+            cells[width - 1].setEmpty();
+
+            // Length: [orphan, wideContinuation, overflow cells, displaced]
+            int resultLength = 1 + 1 + overflow + (displacedCount - 1);
+
+            Cell[] result = new Cell[resultLength];
+            result[0] = orphan;
+            result[1] = new Cell();
+            result[1].setWideContinuation();
+
+            System.arraycopy(toInsert, fit, result, 2, overflow);
+
+            System.arraycopy(displacedCopies, 1, result, 2 + overflow, displacedCount - 1);
+
+            return result;
+        }
+
+        if (overflow == 0 && displacedCount == 0) {
+            return new Cell[0];
+        }
+
+        // Normal case: [overflow cells, displaced]
+        Cell[] result = new Cell[overflow + displacedCount];
+
+        System.arraycopy(toInsert, fit, result, 0, overflow);
+        System.arraycopy(displacedCopies, 0, result, overflow, displacedCount);
+
+        return result;
     }
 
     /**
@@ -121,7 +251,7 @@ public final class TerminalLine {
             copiedCells[i] = cells[i].copy();
         }
 
-        return new TerminalLine(copiedCells, width);
+        return new TerminalLine(copiedCells, width, softWrapped);
     }
 
     /**
@@ -130,6 +260,24 @@ public final class TerminalLine {
     private void checkColumn(int column) {
         if (column < 0 || column >= width) {
             throw new IndexOutOfBoundsException("Column " + column + " out of bounds for width " + width);
+        }
+    }
+
+    /**
+     * Clears a wide character pair so that overwriting one half does not leave an orphan.
+     *
+     * <ul>
+     *   <li>If {@code column} is a continuation cell, the left half (column-1) is emptied.</li>
+     *   <li>If the cell to the right of {@code column} is a continuation, it is emptied.</li>
+     * </ul>
+     */
+    private void clearWidePairAt(int column) {
+        if (column > 0 && cells[column].isWideContinuation()) {
+            cells[column - 1].setEmpty();
+        }
+
+        if (column + 1 < width && cells[column + 1].isWideContinuation()) {
+            cells[column + 1].setEmpty();
         }
     }
 
