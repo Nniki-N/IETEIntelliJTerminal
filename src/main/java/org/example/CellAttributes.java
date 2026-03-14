@@ -1,7 +1,9 @@
 package org.example;
 
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Attributes applied to a cell: foreground color, background color,
@@ -10,6 +12,11 @@ import java.util.Objects;
  * <p> Use the {@code with*()} builder methods to derive new instances.
  */
 public record CellAttributes(TerminalColor foregroundColor, TerminalColor backgroundColor, EnumSet<TextStyle> styles) {
+    @Override
+    public EnumSet<TextStyle> styles() {
+        return styles.isEmpty() ? EnumSet.noneOf(TextStyle.class) : EnumSet.copyOf(styles);
+    }
+
     public static final CellAttributes DEFAULT = new CellAttributes(
             TerminalColor.DEFAULT,
             TerminalColor.DEFAULT,

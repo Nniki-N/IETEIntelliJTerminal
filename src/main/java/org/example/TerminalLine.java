@@ -169,12 +169,11 @@ public final class TerminalLine {
         }
 
         int overflow = toInsert.length - fit;
-        int displacedCount = Math.min(fit, available);
 
-        Cell[] displacedCopies = new Cell[displacedCount];
+        Cell[] displacedCopies = new Cell[fit];
 
-        for (int i = 0; i < displacedCount; i++) {
-            displacedCopies[i] = cells[width - displacedCount + i].copy();
+        for (int i = 0; i < fit; i++) {
+            displacedCopies[i] = cells[width - fit + i].copy();
         }
 
         // Shift cells[column ... width - fit - 1] rightward by fit positions
@@ -203,7 +202,7 @@ public final class TerminalLine {
             }
         }
 
-        boolean splitWide = displacedCount > 0
+        boolean splitWide = fit > 0
                 && displacedCopies[0].isWideContinuation()
                 && !cells[width - 1].isEmpty()
                 && !cells[width - 1].isWideContinuation();
@@ -214,7 +213,7 @@ public final class TerminalLine {
             cells[width - 1].setEmpty();
 
             // Length: [orphan, wideContinuation, overflow cells, displaced]
-            int resultLength = 1 + 1 + overflow + (displacedCount - 1);
+            int resultLength = 1 + 1 + overflow + (fit - 1);
 
             Cell[] result = new Cell[resultLength];
             result[0] = orphan;
@@ -223,20 +222,20 @@ public final class TerminalLine {
 
             System.arraycopy(toInsert, fit, result, 2, overflow);
 
-            System.arraycopy(displacedCopies, 1, result, 2 + overflow, displacedCount - 1);
+            System.arraycopy(displacedCopies, 1, result, 2 + overflow, fit - 1);
 
             return result;
         }
 
-        if (overflow == 0 && displacedCount == 0) {
+        if (overflow == 0 && fit == 0) {
             return new Cell[0];
         }
 
         // Normal case: [overflow cells, displaced]
-        Cell[] result = new Cell[overflow + displacedCount];
+        Cell[] result = new Cell[overflow + fit];
 
         System.arraycopy(toInsert, fit, result, 0, overflow);
-        System.arraycopy(displacedCopies, 0, result, overflow, displacedCount);
+        System.arraycopy(displacedCopies, 0, result, overflow, fit);
 
         return result;
     }
@@ -290,7 +289,7 @@ public final class TerminalLine {
         StringBuilder sb = new StringBuilder(width);
 
         for (Cell cell : cells) {
-            sb.append(cell.isEmpty() ? ' ' : cell.getCharacter());
+            sb.append(cell.isEmpty() || cell.isWideContinuation() ? ' ' : cell.getCharacter());
         }
 
         return sb.toString();

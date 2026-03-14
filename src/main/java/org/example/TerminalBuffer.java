@@ -4,7 +4,7 @@ import java.util.*;
 
 public final class TerminalBuffer {
     private static final int DEFAULT_WIDTH = 80;
-    private static final int DEFAULT_MIN_WIDTH = 2;
+    private static final int MIN_WIDTH = 2;
     private static final int DEFAULT_HEIGHT = 24;
     private static final int DEFAULT_MAX_SCROLLBACK = 1000;
 
@@ -38,8 +38,8 @@ public final class TerminalBuffer {
      * @param maxScrollback maximum lines kept in history. When set 0, disables scrollback
      */
     public TerminalBuffer(int width, int height, int maxScrollback) {
-        if (width < DEFAULT_MIN_WIDTH) {
-            throw new IllegalArgumentException("width must be >= " + DEFAULT_MIN_WIDTH);
+        if (width < MIN_WIDTH) {
+            throw new IllegalArgumentException("width must be >= " + MIN_WIDTH);
         }
         if (height <= 0) {
             throw new IllegalArgumentException("height must be positive");
@@ -84,11 +84,11 @@ public final class TerminalBuffer {
     }
 
     public List<TerminalLine> getScreen() {
-        return screen;
+        return Collections.unmodifiableList(screen);
     }
 
     public List<TerminalLine> getScrollback() {
-        return scrollback;
+        return Collections.unmodifiableList(scrollback);
     }
 
     public int getCursorColumn() {
@@ -389,8 +389,8 @@ public final class TerminalBuffer {
      * <p> The cursor is clamped to the new bounds after resizing.
      */
     public void resize(int newWidth, int newHeight) {
-        if (newWidth < DEFAULT_MIN_WIDTH) {
-            throw new IllegalArgumentException("newWidth must be >= " + DEFAULT_MIN_WIDTH);
+        if (newWidth < MIN_WIDTH) {
+            throw new IllegalArgumentException("newWidth must be >= " + MIN_WIDTH);
         }
 
         if (newHeight <= 0) {
@@ -473,7 +473,7 @@ public final class TerminalBuffer {
     /**
      * Groups physical lines into logical lines.
      */
-    private List<List<TerminalLine>> groupIntoLogicalLines(List<TerminalLine> physicalLines) {
+    private static List<List<TerminalLine>> groupIntoLogicalLines(List<TerminalLine> physicalLines) {
         List<List<TerminalLine>> groups = new ArrayList<>();
         List<TerminalLine> currentLines = new ArrayList<>();
 
@@ -498,7 +498,7 @@ public final class TerminalBuffer {
      * Continuation cells are skipped because wide characters are represented by a single
      * entry with {@code wide=true}. Trailing default-empty entries are trimmed.
      */
-    private List<CellEntry> flattenLogicalLine(List<TerminalLine> logicalLine) {
+    private static List<CellEntry> flattenLogicalLine(List<TerminalLine> logicalLine) {
         List<CellEntry> entries = new ArrayList<>();
 
         for (TerminalLine physicalLine : logicalLine) {
@@ -540,7 +540,7 @@ public final class TerminalBuffer {
      * Wraps a flat {@link CellEntry} sequence into physical lines at {@code newWidth}.
      * Wide characters that would start at the last column of a row go to the next row.
      */
-    private List<TerminalLine> wrapCells(List<CellEntry> entries, int newWidth) {
+    private static List<TerminalLine> wrapCells(List<CellEntry> entries, int newWidth) {
         List<TerminalLine> lines = new ArrayList<>();
         TerminalLine currentLine = new TerminalLine(newWidth);
         int column = 0;
@@ -629,7 +629,7 @@ public final class TerminalBuffer {
     /**
      * Clamps {@code value} to [{@code min}, {@code max}].
      */
-    private int clamp(int value, int min, int max) {
+    private static int clamp(int value, int min, int max) {
         return Math.max(min, Math.min(max, value));
     }
 
@@ -648,7 +648,7 @@ public final class TerminalBuffer {
      * Converts {@code text} to a {@code Cell[]} where every cell maps to one column.
      * Wide characters produce two cells: (character cell, continuation cell).
      */
-    private Cell[] toCells(String text, CellAttributes attributes) {
+    private static Cell[] toCells(String text, CellAttributes attributes) {
         int columns = 0;
 
         for (int i = 0; i < text.length(); ) {
@@ -681,7 +681,7 @@ public final class TerminalBuffer {
      * Removes trailing {@link Cell#isEmpty() empty} cells.
      * Non-empty cells (including continuations) are never trimmed.
      */
-    private Cell[] trimTrailingEmpty(Cell[] cells) {
+    private static Cell[] trimTrailingEmpty(Cell[] cells) {
         int last = cells.length - 1;
 
         while (last >= 0 && cells[last].isEmpty()) {
@@ -704,9 +704,9 @@ public final class TerminalBuffer {
      *
      * <p> Only CJK ideographs is used to show the point of detecting wide characters.
      * More code points to be added:
-     * <a href="https://www.unicode.org/Public/UCD/latest/ucd/EastAsianWidth.txt">unicode</a>
+     * <a href="https://www.unicode.org/Public/UCD/latest/ucd/EastAsianWidth.txt">Unicode</a>
      */
-    private boolean isWideCharacter(int codePoint) {
+    private static boolean isWideCharacter(int codePoint) {
         return (codePoint >= 0x4E00 && codePoint <= 0x9FFF);
     }
 
