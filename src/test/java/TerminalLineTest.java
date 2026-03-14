@@ -1,7 +1,4 @@
-import org.example.CellAttributes;
-import org.example.TerminalColor;
-import org.example.TerminalLine;
-import org.example.TextStyle;
+import org.example.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -12,6 +9,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("TerminalLine")
 class TerminalLineTest {
+
+    private static Cell[] narrowCells(String text) {
+        Cell[] cells = new Cell[text.length()];
+
+        for (int i = 0; i < text.length(); i++) {
+            cells[i] = new Cell(text.charAt(i), CellAttributes.DEFAULT);
+        }
+
+        return cells;
+    }
 
     @Nested
     @DisplayName("Constructor")
@@ -27,6 +34,18 @@ class TerminalLineTest {
                 assertTrue(line.getCell(i).isEmpty());
                 assertEquals(CellAttributes.DEFAULT, line.getCell(i).getAttributes());
             }
+        }
+
+        @Test
+        @DisplayName("softWrapped starts as false")
+        void testSoftWrappedStartsFalse() {
+            assertFalse(new TerminalLine(4).isSoftWrapped());
+        }
+
+        @Test
+        @DisplayName("width=0 throws")
+        void testZeroWidthThrows() {
+            assertThrows(IllegalArgumentException.class, () -> new TerminalLine(0));
         }
     }
 
@@ -61,38 +80,45 @@ class TerminalLineTest {
         }
 
         @Test
-        @DisplayName("getCell() at negative column throws IndexOutOfBoundsException")
-        void testGetCellAtNegativeColumnThrows() {
+        @DisplayName("getCell() at out-of-bounds column throws IndexOutOfBoundsException")
+        void testGetCellAtColumnHigherOrEqualThanWidthThrows() {
+            assertThrows(IndexOutOfBoundsException.class, () -> new TerminalLine(5).getCell(5));
             assertThrows(IndexOutOfBoundsException.class, () -> new TerminalLine(5).getCell(-1));
         }
 
         @Test
-        @DisplayName("getCell() at column equal or higher than width throws IndexOutOfBoundsException")
-        void testGetCellAtColumnHigherOrEqualThanWidthThrows() {
-            assertThrows(IndexOutOfBoundsException.class, () -> new TerminalLine(5).getCell(5));
-            assertThrows(IndexOutOfBoundsException.class, () -> new TerminalLine(5).getCell(6));
-        }
-
-        @Test
-        @DisplayName("setCell() at negative column throws IndexOutOfBoundsException")
+        @DisplayName("setCell() at out-of-bounds column throws IndexOutOfBoundsException")
         void testSetCellAtNegativeColumnThrows() {
             assertThrows(
                     IndexOutOfBoundsException.class,
                     () -> new TerminalLine(5).setCell(-1, 'A', CellAttributes.DEFAULT)
             );
-        }
-
-        @Test
-        @DisplayName("setCell() at column equal or higher than width throws IndexOutOfBoundsException")
-        void testSetCellAtColumnHigherOrEqualThanWidthThrows() {
             assertThrows(
                     IndexOutOfBoundsException.class,
                     () -> new TerminalLine(5).setCell(5, 'A', CellAttributes.DEFAULT)
             );
-            assertThrows(
-                    IndexOutOfBoundsException.class,
-                    () -> new TerminalLine(5).setCell(6, 'A', CellAttributes.DEFAULT)
-            );
+        }
+
+        @Test
+        @DisplayName("setCell() on a wide char's left half clears the continuation")
+        void testSetCellClearsContinuation() {
+            TerminalLine line = new TerminalLine(4);
+            line.setWideCell(0, (char) 0x4E00, CellAttributes.DEFAULT);
+            line.setCell(0, 'A', CellAttributes.DEFAULT);
+
+            assertFalse(line.getCell(1).isWideContinuation());
+            assertTrue(line.getCell(1).isEmpty());
+        }
+
+        @Test
+        @DisplayName("setCell() on a continuation cell clears the wide char to its left")
+        void testSetCellOnContinuationClearsLeftHalf() {
+            TerminalLine line = new TerminalLine(4);
+            line.setWideCell(0, (char) 0x4E00, CellAttributes.DEFAULT);
+            line.setCell(1, 'B', CellAttributes.DEFAULT);
+
+            assertEquals('B', line.getCell(1).getCharacter());
+            assertTrue(line.getCell(0).isEmpty());
         }
     }
 
@@ -125,12 +151,49 @@ class TerminalLineTest {
     }
 
     @Nested
+    @DisplayName("setWideCell()")
+    class SetWideCell {
+
+        @Test
+        @DisplayName("takes two columns: left = character, right = continuation")
+        void testSetWideCellTwoColumns() {
+            TerminalLine line = new TerminalLine(4);
+            line.setWideCell(0, (char) 0x4E00, CellAttributes.DEFAULT);
+
+            assertEquals((char) 0x4E00, line.getCell(0).getCharacter());
+            assertFalse(line.getCell(0).isWideContinuation());
+            assertTrue(line.getCell(1).isWideContinuation());
+        }
+
+        @Test
+        @DisplayName("throws when the second column would be out of bounds")
+        void testSetWideCellAtLastColumnThrows() {
+            TerminalLine line = new TerminalLine(4);
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> line.setWideCell(3, (char) 0x4E00, CellAttributes.DEFAULT)
+            );
+        }
+
+        @Test
+        @DisplayName("clears a prior wide pair before writing")
+        void testSetWideCellClearsPriorPair() {
+            TerminalLine line = new TerminalLine(6);
+            line.setWideCell(0, (char) 0x4E00, CellAttributes.DEFAULT);
+            line.setWideCell(0, (char) 0x4E01, CellAttributes.DEFAULT);
+
+            assertEquals((char) 0x4E01, line.getCell(0).getCharacter());
+            assertTrue(line.getCell(1).isWideContinuation());
+        }
+    }
+
+    @Nested
     @DisplayName("fill() / fill()")
     class FillAndClear {
 
         @Test
-        @DisplayName("fill() sets to every cell")
-        void testFillAllWithCharacterChangesEveryCell() {
+        @DisplayName("fill() sets every cell to the given character")
+        void testFillAllCells() {
             TerminalLine line = new TerminalLine(4);
             EnumSet<TextStyle> styles = EnumSet.noneOf(TextStyle.class);
             CellAttributes cellAttributes = new CellAttributes(TerminalColor.YELLOW, TerminalColor.DEFAULT, styles);
@@ -170,24 +233,28 @@ class TerminalLineTest {
     }
 
     @Nested
-    @DisplayName("insertCellAt()")
-    class InsertCellAt {
+    @DisplayName("insertCellsAt()")
+    class InsertCellsAt {
 
         @Test
-        @DisplayName("inserting at column 0 shifts all existing cells right by one")
+        @DisplayName("inserting at column 0 shifts all existing cells right")
         void testInsertAtZeroShiftsAll() {
             TerminalLine line = new TerminalLine(5);
             line.setCell(0, 'A', CellAttributes.DEFAULT);
             line.setCell(1, 'B', CellAttributes.DEFAULT);
             line.setCell(2, 'C', CellAttributes.DEFAULT);
             line.setCell(3, 'D', CellAttributes.DEFAULT);
-            line.insertCellAt(0, 'E', CellAttributes.DEFAULT);
+
+            Cell[] result = line.insertCellsAt(0, narrowCells("E"));
 
             assertEquals('E', line.getCell(0).getCharacter());
             assertEquals('A', line.getCell(1).getCharacter());
             assertEquals('B', line.getCell(2).getCharacter());
             assertEquals('C', line.getCell(3).getCharacter());
             assertEquals('D', line.getCell(4).getCharacter());
+
+            assertEquals(1, result.length);
+            assertTrue(result[0].isEmpty());
         }
 
         @Test
@@ -198,7 +265,8 @@ class TerminalLineTest {
             line.setCell(1, 'B', CellAttributes.DEFAULT);
             line.setCell(2, 'C', CellAttributes.DEFAULT);
             line.setCell(3, 'D', CellAttributes.DEFAULT);
-            line.insertCellAt(2, 'E', CellAttributes.DEFAULT);
+
+            line.insertCellsAt(2, narrowCells("E"));
 
             assertEquals('A', line.getCell(0).getCharacter());
             assertEquals('B', line.getCell(1).getCharacter());
@@ -208,34 +276,110 @@ class TerminalLineTest {
         }
 
         @Test
-        @DisplayName("inserting when the line is full discards the rightmost cell")
-        void testInsertDiscardsRightmostWhenFull() {
+        @DisplayName("cells that do not fit are returned as displaced, in order")
+        void testDisplacedCellsReturned() {
             TerminalLine line = new TerminalLine(4);
             line.setCell(0, 'A', CellAttributes.DEFAULT);
             line.setCell(1, 'B', CellAttributes.DEFAULT);
             line.setCell(2, 'C', CellAttributes.DEFAULT);
             line.setCell(3, 'D', CellAttributes.DEFAULT);
-            line.insertCellAt(0, 'E', CellAttributes.DEFAULT);
 
-            assertEquals('E', line.getCell(0).getCharacter());
-            assertEquals('A', line.getCell(1).getCharacter());
-            assertEquals('B', line.getCell(2).getCharacter());
-            assertEquals('C', line.getCell(3).getCharacter());
+            Cell[] result = line.insertCellsAt(0, narrowCells("E"));
+
+            assertEquals(1, result.length);
+            assertEquals('D', result[0].getCharacter());
         }
 
         @Test
-        @DisplayName("empty flags remain when shifting cells")
-        void testInsertKeepsEmptyFlags() {
+        @DisplayName("inserting multiple cells at once shifts correctly")
+        void testInsertMultipleCells() {
+            TerminalLine line = new TerminalLine(6);
+            line.setCell(0, 'A', CellAttributes.DEFAULT);
+            line.setCell(1, 'B', CellAttributes.DEFAULT);
+
+            line.insertCellsAt(0, narrowCells("XY"));
+
+            assertEquals('X', line.getCell(0).getCharacter());
+            assertEquals('Y', line.getCell(1).getCharacter());
+            assertEquals('A', line.getCell(2).getCharacter());
+            assertEquals('B', line.getCell(3).getCharacter());
+        }
+
+        @Test
+        @DisplayName("excess toInsert beyond line capacity returned as overflow")
+        void testOverflowReturnedWithDisplaced() {
             TerminalLine line = new TerminalLine(4);
             line.setCell(0, 'A', CellAttributes.DEFAULT);
-            line.insertCellAt(0, 'E', CellAttributes.DEFAULT);
+            line.setCell(1, 'B', CellAttributes.DEFAULT);
+            line.setCell(2, 'C', CellAttributes.DEFAULT);
+            line.setCell(3, 'D', CellAttributes.DEFAULT);
+
+            Cell[] result = line.insertCellsAt(0, narrowCells("EFGHI"));
+
+            assertEquals(5, result.length);
+            assertEquals('I', result[0].getCharacter());
+            assertEquals('A', result[1].getCharacter());
+            assertEquals('B', result[2].getCharacter());
+            assertEquals('C', result[3].getCharacter());
+            assertEquals('D', result[4].getCharacter());
+        }
+
+        @Test
+        @DisplayName("empty flags on existing cells are preserved through the shift")
+        void testEmptyCellsFlagPreservedOnShift() {
+            TerminalLine line = new TerminalLine(4);
+            line.setCell(0, 'A', CellAttributes.DEFAULT);
+
+            line.insertCellsAt(0, narrowCells("E"));
 
             assertEquals('E', line.getCell(0).getCharacter());
             assertEquals('A', line.getCell(1).getCharacter());
             assertTrue(line.getCell(2).isEmpty());
             assertTrue(line.getCell(3).isEmpty());
         }
+
+        @Test
+        @DisplayName("wide pair split: orphaned wide character returned with the wide continuation")
+        void testWidePairSplitRecovery() {
+            TerminalLine line = new TerminalLine(4);
+            line.setWideCell(2, (char) 0x4E00, CellAttributes.DEFAULT);
+
+            Cell[] result = line.insertCellsAt(0, narrowCells("X"));
+
+            assertEquals(2, result.length);
+            assertEquals((char) 0x4E00, result[0].getCharacter());
+            assertFalse(result[0].isWideContinuation());
+            assertTrue(result[1].isWideContinuation());
+            assertTrue(line.getCell(3).isEmpty());
+        }
+
+        @Test
+        @DisplayName("wide pair in toInsert is not split across the line edge")
+        void testWidePairInToInsertNotSplit() {
+            TerminalLine line = new TerminalLine(4);
+
+            Cell wideChar = new Cell((char) 0x4E00, CellAttributes.DEFAULT);
+            Cell wideContinuation = new Cell();
+            wideContinuation.setWideContinuation();
+            Cell[] toInsert = {new Cell('X', CellAttributes.DEFAULT), wideChar, wideContinuation};
+
+            Cell[] result = line.insertCellsAt(2, toInsert);
+
+            assertEquals('X', line.getCell(2).getCharacter());
+
+            boolean foundWide = false;
+
+            for (Cell cell : result) {
+                if (!cell.isEmpty() && !cell.isWideContinuation() && cell.getCharacter() == (char) 0x4E00) {
+                    foundWide = true;
+                    break;
+                }
+            }
+
+            assertTrue(foundWide, "Wide char should be in overflow");
+        }
     }
+
 
     @Nested
     @DisplayName("toString()")
@@ -268,6 +412,17 @@ class TerminalLineTest {
 
             assertEquals("   ", line.toString());
         }
+
+        @Test
+        @DisplayName("wide continuation cell renders as space")
+        void testWideContinuationRendersAsSpace() {
+            TerminalLine line = new TerminalLine(4);
+            line.setWideCell(0, (char) 0x4E00, CellAttributes.DEFAULT);
+            String s = line.toString();
+
+            assertEquals(4, s.length());
+            assertEquals(' ', s.charAt(1));
+        }
     }
 
     @Nested
@@ -284,6 +439,27 @@ class TerminalLineTest {
 
             assertEquals('A', copy.getCell(0).getCharacter());
             assertEquals('B', copy.getCell(1).getCharacter());
+        }
+
+        @Test
+        @DisplayName("copy keeps softWrapped flag")
+        void testCopyKeepsSoftWrapped() {
+            TerminalLine line = new TerminalLine(4);
+            line.setSoftWrapped(true);
+            TerminalLine copy = line.copy();
+
+            assertTrue(copy.isSoftWrapped());
+        }
+
+        @Test
+        @DisplayName("copy keeps wide pair structure")
+        void testCopyKeepsWidePair() {
+            TerminalLine line = new TerminalLine(4);
+            line.setWideCell(0, (char) 0x4E00, CellAttributes.DEFAULT);
+            TerminalLine copy = line.copy();
+
+            assertEquals((char) 0x4E00, copy.getCell(0).getCharacter());
+            assertTrue(copy.getCell(1).isWideContinuation());
         }
 
         @Test

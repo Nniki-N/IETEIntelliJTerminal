@@ -37,6 +37,25 @@ class TerminalBufferTest {
         }
 
         @Test
+        @DisplayName("width = 1 throws; width=2 is the minimum and does not throw")
+        void testMinWidth() {
+            assertThrows(IllegalArgumentException.class, () -> new TerminalBuffer(1, 5, 0));
+            assertDoesNotThrow(() -> new TerminalBuffer(2, 5, 0));
+        }
+
+        @Test
+        @DisplayName("height = 0 throws")
+        void testZeroHeightThrows() {
+            assertThrows(IllegalArgumentException.class, () -> new TerminalBuffer(5, 0, 0));
+        }
+
+        @Test
+        @DisplayName("maxScrollback = -1 throws")
+        void testNegativeScrollbackThrows() {
+            assertThrows(IllegalArgumentException.class, () -> new TerminalBuffer(5, 5, -1));
+        }
+
+        @Test
         @DisplayName("cursor starts at (0, 0)")
         void testCursorStartsAtOrigin() {
             TerminalBuffer buf = new TerminalBuffer(10, 5, 100);
@@ -98,7 +117,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("setForeground changes only the foreground color")
+        @DisplayName("setForeground() changes only the foreground color")
         void testSetForeground() {
             buf.setForeground(TerminalColor.RED);
 
@@ -107,7 +126,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("setBackground changes only the background color")
+        @DisplayName("setBackground() changes only the background color")
         void testSetBackground() {
             buf.setBackground(TerminalColor.BLUE);
 
@@ -116,7 +135,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("setStyles replaces the full style set")
+        @DisplayName("setStyles() replaces the full style set")
         void testSetStylesReplacesAll() {
             buf.setStyles(TextStyle.BOLD, TextStyle.UNDERLINE);
 
@@ -126,7 +145,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("calling setStyles with no arguments clears all styles")
+        @DisplayName("setStyles() with no arguments clears all styles")
         void testSetStylesWithNoArgumentsClears() {
             buf.setStyles(TextStyle.BOLD);
             buf.setStyles();
@@ -135,7 +154,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("current attributes at write time are passed into the cell")
+        @DisplayName("current attributes are written into the cell")
         void testCurrentAttributesPassedIntoCell() {
             buf.setForeground(TerminalColor.MAGENTA);
             buf.setStyles(TextStyle.BOLD);
@@ -171,7 +190,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("setCursor positions the cursor exactly")
+        @DisplayName("setCursor() positions the cursor exactly")
         void testSetCursorExact() {
             buf.setCursor(3, 2);
 
@@ -180,7 +199,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("setCursor with negative column sets column to 0")
+        @DisplayName("setCursor() with negative column sets column to 0")
         void testSetCursorNegativeCol() {
             buf.setCursor(-5, 0);
 
@@ -188,7 +207,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("setCursor with column beyond width-1 sets column to width-1")
+        @DisplayName("setCursor() clamps column beyond width-1 to width-1")
         void setCursorOverflowColumn() {
             buf.setCursor(999, 0);
 
@@ -196,7 +215,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("setCursor with negative row sets row to 0")
+        @DisplayName("setCursor() with negative row sets row to 0")
         void testSetCursorNegativeRow() {
             buf.setCursor(0, -3);
 
@@ -204,7 +223,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("setCursor clamps row beyond height-1 to height-1")
+        @DisplayName("setCursor() clamps row beyond height-1 to height-1")
         void testSetCursorOverflowRow() {
             buf.setCursor(0, 999);
 
@@ -212,7 +231,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("setCursorColumn and setCursorRow set positions independently")
+        @DisplayName("setCursorColumn() and setCursorRow() set positions independently")
         void testSetCursorColumnRowIndependent() {
             buf.setCursorColumn(7);
             buf.setCursorRow(3);
@@ -222,7 +241,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("moveCursorUp by N rows leads to row index decrease")
+        @DisplayName("moveCursorUp() by N rows leads to row index decrease")
         void testMoveCursorUp() {
             buf.setCursor(0, 4);
             buf.moveCursorUp(2);
@@ -231,7 +250,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("moveCursorUp stops at row 0")
+        @DisplayName("moveCursorUp() stops at row 0")
         void testMoveCursorUpOverflow() {
             buf.setCursor(0, 1);
             buf.moveCursorUp(100);
@@ -240,7 +259,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("moveCursorDown by N rows leads to row index increase")
+        @DisplayName("moveCursorDown() by N rows leads to row index increase")
         void testMoveCursorDown() {
             buf.setCursor(0, 0);
             buf.moveCursorDown(3);
@@ -249,7 +268,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("moveCursorDown stops at height-1")
+        @DisplayName("moveCursorDown() stops at height-1")
         void testMoveCursorDownOverflow() {
             buf.setCursor(0, 3);
             buf.moveCursorDown(100);
@@ -258,7 +277,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("moveCursorLeft by N columns leads to column index decrease")
+        @DisplayName("moveCursorLeft() by N columns leads to column index decrease")
         void testMoveCursorLeft() {
             buf.setCursor(6, 0);
             buf.moveCursorLeft(4);
@@ -267,7 +286,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("moveCursorLeft stops at column 0")
+        @DisplayName("moveCursorLeft() stops at column 0")
         void testMoveCursorLeftClamps() {
             buf.setCursor(2, 0);
             buf.moveCursorLeft(100);
@@ -276,7 +295,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("moveCursorRight by N columns leads to column index increase")
+        @DisplayName("moveCursorRight() by N columns leads to column index increase")
         void testMoveCursorRight() {
             buf.setCursor(0, 0);
             buf.moveCursorRight(5);
@@ -285,7 +304,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("moveCursorRight stops at width-1")
+        @DisplayName("moveCursorRight() stops at width-1")
         void testMoveCursorRightClamps() {
             buf.setCursor(7, 0);
             buf.moveCursorRight(100);
@@ -354,6 +373,14 @@ class TerminalBufferTest {
         }
 
         @Test
+        @DisplayName("marks a line as soft-wrapped when content wraps")
+        void testSoftWrappedFlagSet() {
+            buf.writeText("ABCDEFGHIJKL");
+            assertTrue(buf.getScreen().get(0).isSoftWrapped());
+            assertFalse(buf.getScreen().get(1).isSoftWrapped());
+        }
+
+        @Test
         @DisplayName("after wrapping the cursor is on the next row")
         void testCursorOnNextRowAfterWrap() {
             buf.setCursor(9, 0);
@@ -364,18 +391,45 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("writing on the last row scrolls the screen and preserves the cursor row")
-        void testScrollsWhenWritingOnLastRow() {
-            for (int r = 0; r < 5; r++) {
-                buf.fillLine(r, (char) ('A' + r));
-            }
-
+        @DisplayName("scrolls the screen when writing on the last row")
+        void testScrollsOnLastRow() {
             buf.setCursor(9, 4);
             buf.writeText("XY");
 
             assertEquals(1, buf.getScrollback().size());
             assertEquals(4, buf.getCursorRow());
         }
+
+        @Test
+        @DisplayName("wide character takes 2 columns and continuation cell is set")
+        void testWideCharacterTakesTwoColumns() {
+            buf.writeText("\u4E00");
+
+            assertFalse(buf.getScreen().getFirst().getCell(0).isWideContinuation());
+            assertTrue(buf.getScreen().getFirst().getCell(1).isWideContinuation());
+            assertEquals(2, buf.getCursorColumn());
+        }
+
+        @Test
+        @DisplayName("getCharacterAt returns space for a wide continuation cell")
+        void testWideCharContinuationReturnsSpace() {
+            buf.writeText("\u4E00");
+
+            assertEquals('\u4E00', buf.getCharacterAt(0, 0));
+            assertEquals(' ', buf.getCharacterAt(1, 0));
+        }
+
+        @Test
+        @DisplayName("wide character at last column wraps to next row and trailing column stays empty")
+        void testWideCharWrapsAtLastColumn() {
+            buf.setCursor(9, 0);
+            buf.writeText("\u4E00");
+
+            assertEquals(' ', buf.getCharacterAt(9, 0));
+            assertEquals('\u4E00', buf.getCharacterAt(0, 1));
+            assertTrue(buf.getScreen().get(1).getCell(1).isWideContinuation());
+        }
+
 
         @Test
         @DisplayName("passing null as text does nothing")
@@ -444,6 +498,21 @@ class TerminalBufferTest {
         }
 
         @Test
+        @DisplayName("cascade: displaced from row n carries to row n + 1, and so on")
+        void testCascadeAcrossRows() {
+            TerminalBuffer buf = new TerminalBuffer(5, 3, 100);
+            buf.writeText("ABCDE");
+            buf.writeText("FGHIJ");
+            buf.setCursor(0, 0);
+            buf.insertText("Z");
+
+            assertEquals('Z', buf.getCharacterAt(0, 0));
+            assertEquals('A', buf.getCharacterAt(1, 0));
+            assertEquals('E', buf.getCharacterAt(0, 1));
+            assertEquals('J', buf.getCharacterAt(0, 2));
+        }
+
+        @Test
         @DisplayName("scrolls the screen when wrapping on the last row")
         void testScrollWhenWrappingOnLastRow() {
             buf.fillLine(4, 'Z');
@@ -452,6 +521,16 @@ class TerminalBufferTest {
 
             assertFalse(buf.getScrollback().isEmpty());
             assertTrue(buf.getCursorRow() < buf.getHeight());
+        }
+
+        @Test
+        @DisplayName("wide character inserts two columns and wraps if needed")
+        void testWideCharInsert() {
+            buf.setCursor(0, 0);
+            buf.insertText("\u4E00");
+
+            assertFalse(buf.getScreen().getFirst().getCell(0).isWideContinuation());
+            assertTrue(buf.getScreen().getFirst().getCell(1).isWideContinuation());
         }
 
         @Test
@@ -521,14 +600,29 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("fillLine() with negative row throws IndexOutOfBoundsException")
-        void testFillLineNegativeRowThrows() {
-            assertThrows(IndexOutOfBoundsException.class, () -> buf.fillLine(-1, 'X'));
+        @DisplayName("fillLine() with wide char fills in pairs; odd trailing column is empty")
+        void testFillLineWithWideChar() {
+            TerminalBuffer b = new TerminalBuffer(6, 2, 0);
+            b.fillLine(0, (char) 0x4E00);
+
+            assertTrue(b.getScreen().getFirst().getCell(1).isWideContinuation());
+            assertTrue(b.getScreen().getFirst().getCell(3).isWideContinuation());
+            assertTrue(b.getScreen().getFirst().getCell(5).isWideContinuation());
         }
 
         @Test
-        @DisplayName("fillLine() at height throws IndexOutOfBoundsException")
-        void testFillLineAtHeightThrows() {
+        @DisplayName("fillLine() with odd width: last column stays empty for wide char")
+        void testFillLineOddWidthWideChar() {
+            TerminalBuffer b = new TerminalBuffer(5, 2, 0);
+            b.fillLine(0, (char) 0x4E00);
+
+            assertTrue(b.getScreen().getFirst().getCell(4).isEmpty());
+        }
+
+        @Test
+        @DisplayName("fillLine() out-of-bounds row throws IndexOutOfBoundsException")
+        void testFillLineNegativeRowThrows() {
+            assertThrows(IndexOutOfBoundsException.class, () -> buf.fillLine(-1, 'X'));
             assertThrows(IndexOutOfBoundsException.class, () -> buf.fillLine(height, 'X'));
         }
 
@@ -611,39 +705,39 @@ class TerminalBufferTest {
         @Test
         @DisplayName("scrollback grows up to maxScrollback then stops")
         void testScrollbackDoesNotGrowPastMaxScrollback() {
-            TerminalBuffer b = new TerminalBuffer(5, 3, 5);
+            TerminalBuffer buf = new TerminalBuffer(5, 3, 5);
 
             for (int i = 0; i < 20; i++) {
-                b.insertEmptyLineAtBottom();
+                buf.insertEmptyLineAtBottom();
             }
 
-            assertEquals(5, b.getScrollback().size());
+            assertEquals(5, buf.getScrollback().size());
         }
 
         @Test
         @DisplayName("oldest scrollback line is removed when the limit is reached")
         void testOldestLineRemoved() {
-            TerminalBuffer b = new TerminalBuffer(5, 2, 2);
+            TerminalBuffer buf = new TerminalBuffer(5, 2, 2);
 
-            b.fillLine(0, '1');
-            b.insertEmptyLineAtBottom();
-            b.fillLine(0, '2');
-            b.insertEmptyLineAtBottom();
-            b.fillLine(0, '3');
-            b.insertEmptyLineAtBottom();
+            buf.fillLine(0, '1');
+            buf.insertEmptyLineAtBottom();
+            buf.fillLine(0, '2');
+            buf.insertEmptyLineAtBottom();
+            buf.fillLine(0, '3');
+            buf.insertEmptyLineAtBottom();
 
-            assertEquals(2, b.getScrollback().size());
-            assertEquals("22222", b.getLineAsString(-2));
-            assertEquals("33333", b.getLineAsString(-1));
+            assertEquals(2, buf.getScrollback().size());
+            assertEquals("22222", buf.getLineAsString(-2));
+            assertEquals("33333", buf.getLineAsString(-1));
         }
 
         @Test
         @DisplayName("no scrollback is kept when maxScrollback is 0")
         void testNoScrollbackWhenDisabled() {
-            TerminalBuffer b = new TerminalBuffer(5, 3, 0);
-            b.insertEmptyLineAtBottom();
+            TerminalBuffer buf = new TerminalBuffer(5, 3, 0);
+            buf.insertEmptyLineAtBottom();
 
-            assertEquals(0, b.getScrollback().size());
+            assertEquals(0, buf.getScrollback().size());
         }
     }
 
@@ -676,7 +770,7 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("clearScreen() resets moves to (0, 0)")
+        @DisplayName("clearScreen() resets cursor to (0, 0)")
         void testClearScreenResetsCursor() {
             buf.setCursor(3, 2);
             buf.clearScreen();
@@ -747,20 +841,10 @@ class TerminalBufferTest {
         }
 
         @Test
-        @DisplayName("getCharacterAt with negative column throws")
+        @DisplayName("getCharacterAt with out-of-bounds throws")
         void testGetCharAtNegativeColThrows() {
             assertThrows(IndexOutOfBoundsException.class, () -> buf.getCharacterAt(-1, 0));
-        }
-
-        @Test
-        @DisplayName("getCharacterAt with column >= width throws")
-        void testGetCharAtOverflowColumnThrows() {
             assertThrows(IndexOutOfBoundsException.class, () -> buf.getCharacterAt(width, 0));
-        }
-
-        @Test
-        @DisplayName("getCharacterAt with row >= height throws")
-        void testGetCharAtOverflowRowThrows() {
             assertThrows(IndexOutOfBoundsException.class, () -> buf.getCharacterAt(0, height));
         }
 
@@ -857,6 +941,124 @@ class TerminalBufferTest {
 
             assertTrue(lines[0].startsWith("1"), "First line should be the oldest scrollback line");
             assertTrue(lines[1].startsWith("2"), "Second line should be the current screen row 0");
+        }
+    }
+
+
+    @Nested
+    @DisplayName("resize()")
+    class Resize {
+
+        @Test
+        @DisplayName("height shrink pushes top lines into scrollback")
+        void testHeightShrinkPushesToScrollback() {
+            TerminalBuffer buf = new TerminalBuffer(5, 3, 100);
+            buf.fillLine(0, 'A');
+            buf.fillLine(1, 'B');
+            buf.fillLine(2, 'C');
+            buf.resize(5, 2);
+
+            assertEquals(2, buf.getScreen().size());
+            assertEquals(1, buf.getScrollback().size());
+            assertEquals('A', buf.getCharacterAt(0, -1));
+        }
+
+        @Test
+        @DisplayName("height grow pulls lines back from scrollback")
+        void testHeightGrowPullsFromScrollback() {
+            TerminalBuffer buf = new TerminalBuffer(5, 2, 100);
+            buf.fillLine(0, 'A');
+            buf.insertEmptyLineAtBottom();
+            buf.resize(5, 3);
+
+            assertEquals(3, buf.getScreen().size());
+            assertEquals(0, buf.getScrollback().size());
+            assertEquals('A', buf.getCharacterAt(0, 0));
+        }
+
+        @Test
+        @DisplayName("cursor is clamped to new bounds after resize")
+        void testCursorClampedAfterResize() {
+            TerminalBuffer buf = new TerminalBuffer(10, 5, 0);
+            buf.setCursor(9, 4);
+            buf.resize(5, 3);
+
+            assertTrue(buf.getCursorColumn() <= 4);
+            assertTrue(buf.getCursorRow() <= 2);
+        }
+
+        @Test
+        @DisplayName("newWidth = 1 throws")
+        void testInvalidNewWidthThrows() {
+            TerminalBuffer buf = new TerminalBuffer(5, 3, 0);
+
+            assertThrows(IllegalArgumentException.class, () -> buf.resize(1, 3));
+        }
+
+        @Test
+        @DisplayName("newHeight = 0 throws")
+        void testInvalidNewHeightThrows() {
+            TerminalBuffer buf = new TerminalBuffer(5, 3, 0);
+
+            assertThrows(IllegalArgumentException.class, () -> buf.resize(5, 0));
+        }
+
+        @Test
+        @DisplayName("width change reflows soft-wrapped lines together")
+        void testWidthChangeReflowsSoftWrapped() {
+            TerminalBuffer buf = new TerminalBuffer(5, 3, 100);
+            buf.writeText("ABCDEFGH");
+            buf.resize(8, 3);
+
+            boolean foundLine = false;
+
+            for (int r = 0; r < buf.getHeight(); r++) {
+                String line = buf.getLineAsString(r);
+
+                if (line.startsWith("ABCDEFGH")) {
+                    foundLine = true;
+                    break;
+                }
+            }
+
+            assertTrue(foundLine, "Reflowed content should appear on one line");
+        }
+
+        @Test
+        @DisplayName("width change: hard-ended lines stay separate after reflow")
+        void testHardEndedLinesSeparateAfterReflow() {
+            TerminalBuffer buf = new TerminalBuffer(5, 4, 100);
+            buf.writeText("Hello");
+
+            buf.setCursorRow(1);
+            buf.setCursorColumn(0);
+            buf.writeText("World");
+            buf.resize(10, 4);
+
+            String all = buf.getAllContentAsString();
+
+            assertTrue(all.contains("Hello"), "Hello should still be present");
+            assertTrue(all.contains("World"), "World should still be present");
+        }
+
+        @Test
+        @DisplayName("resize preserves wide characters")
+        void testResizePreservesWideChars() {
+            TerminalBuffer buf = new TerminalBuffer(6, 3, 100);
+            buf.writeText("A\u4E00B");
+            buf.resize(4, 3);
+
+            boolean foundA = false;
+
+            for (int r = 0; r < buf.getHeight(); r++) {
+                if (buf.getCharacterAt(0, r) == 'A') {
+                    foundA = true;
+
+                    assertEquals((char) 0x4E00, buf.getCharacterAt(1, r));
+                    assertTrue(buf.getScreen().get(r).getCell(2).isWideContinuation());
+                }
+            }
+            assertTrue(foundA, "Content should survive resize");
         }
     }
 }

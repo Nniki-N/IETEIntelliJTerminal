@@ -25,6 +25,7 @@ class CellTest {
             assertTrue(cell.isEmpty());
             assertEquals(' ', cell.getCharacter());
             assertEquals(CellAttributes.DEFAULT, cell.getAttributes());
+            assertFalse(cell.isWideContinuation());
         }
 
         @Test
@@ -37,6 +38,7 @@ class CellTest {
             assertFalse(cell.isEmpty());
             assertEquals('A', cell.getCharacter());
             assertEquals(cellAttributes, cell.getAttributes());
+            assertFalse(cell.isWideContinuation());
         }
     }
 
@@ -52,6 +54,17 @@ class CellTest {
 
             assertFalse(cell.isEmpty());
             assertEquals('B', cell.getCharacter());
+        }
+
+        @Test
+        @DisplayName("set() clears wideContinuation flag if it was set")
+        void testSetClearsWideContinuation() {
+            Cell cell = new Cell();
+            cell.setWideContinuation();
+            cell.set('A', CellAttributes.DEFAULT);
+
+            assertFalse(cell.isWideContinuation());
+            assertFalse(cell.isEmpty());
         }
 
         @Test
@@ -80,6 +93,7 @@ class CellTest {
             cell.setEmpty();
 
             assertTrue(cell.isEmpty());
+            assertFalse(cell.isWideContinuation());
             assertEquals(' ', cell.getCharacter());
         }
 
@@ -92,6 +106,44 @@ class CellTest {
             cell.setEmpty();
 
             assertEquals(CellAttributes.DEFAULT, cell.getAttributes());
+        }
+
+        @Test
+        @DisplayName("setEmpty() clears wideContinuation flag")
+        void testSetEmptyClearsWideContinuation() {
+            Cell cell = new Cell();
+            cell.setWideContinuation();
+            cell.setEmpty();
+
+            assertFalse(cell.isWideContinuation());
+            assertTrue(cell.isEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("setWideContinuation()")
+    class SetWideContinuation {
+
+        @Test
+        @DisplayName("marks cell as continuation placeholder")
+        void testSetWideContinuationFlags() {
+            Cell cell = new Cell();
+            cell.setWideContinuation();
+
+            assertTrue(cell.isWideContinuation());
+            assertFalse(cell.isEmpty());
+            assertEquals(' ', cell.getCharacter());
+            assertEquals(CellAttributes.DEFAULT, cell.getAttributes());
+        }
+
+        @Test
+        @DisplayName("overwrites a previously filled cell")
+        void testSetWideContinuationOverwritesFilled() {
+            Cell cell = new Cell('A', CellAttributes.DEFAULT);
+            cell.setWideContinuation();
+
+            assertTrue(cell.isWideContinuation());
+            assertFalse(cell.isEmpty());
         }
     }
 
@@ -109,9 +161,21 @@ class CellTest {
 
             assertEquals('M', copy.getCharacter());
             assertFalse(copy.isEmpty());
+            assertFalse(copy.isWideContinuation());
             assertEquals(TerminalColor.CYAN, copy.getAttributes().foregroundColor());
             assertEquals(TerminalColor.DEFAULT, copy.getAttributes().backgroundColor());
             assertTrue(copy.getAttributes().styles().contains(TextStyle.BOLD));
+        }
+
+        @Test
+        @DisplayName("copy keeps wideContinuation flag")
+        void testCopyPreservesWideContinuation() {
+            Cell original = new Cell();
+            original.setWideContinuation();
+            Cell copy = original.copy();
+
+            assertTrue(copy.isWideContinuation());
+            assertFalse(copy.isEmpty());
         }
 
         @Test
@@ -123,6 +187,17 @@ class CellTest {
 
             assertEquals('A', original.getCharacter());
             assertEquals('B', copy.getCharacter());
+        }
+
+        @Test
+        @DisplayName("changing the original does not affect the copy")
+        void testOriginalChangeDoesNotAffectCopy() {
+            Cell original = new Cell('A', CellAttributes.DEFAULT);
+            Cell copy = original.copy();
+            original.setEmpty();
+
+            assertFalse(copy.isEmpty());
+            assertEquals('A', copy.getCharacter());
         }
     }
 }
